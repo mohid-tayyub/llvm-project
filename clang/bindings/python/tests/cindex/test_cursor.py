@@ -12,6 +12,7 @@ from clang.cindex import CursorKind
 from clang.cindex import TemplateArgumentKind
 from clang.cindex import TranslationUnit
 from clang.cindex import TypeKind
+from clang.cindex import BinaryOperator
 from .util import get_cursor
 from .util import get_cursors
 from .util import get_tu
@@ -392,6 +393,105 @@ class TestCursor(unittest.TestCase):
         self.assertEqual(spam.enum_value, -1)
         self.assertEqual(ham.kind, CursorKind.ENUM_CONSTANT_DECL)
         self.assertEqual(ham.enum_value, 0x10000000000)
+    binops = """
+    struct C {
+    int m;
+    };
+
+    void func(void){
+    int a, b;
+    int C::* p = &C::
+
+    C c;
+    c.*p;
+
+    C* pc;
+    pc->*p;
+
+    a * b;
+    a / b;
+    a % b;
+    a + b;
+    a - b;
+
+    a << b;
+    a >> b;
+
+    a < b;
+    a > b;
+
+    a <= b;
+    a >= b;
+    a == b;
+    a != b;
+
+    a & b;
+    a ^ b;
+    a | b;
+
+    a && b;
+    a || b;
+
+    a = b;
+
+    a *= b;
+    a /= b;
+    a %= b;
+    a += b;
+    a -= b;
+
+    a <<= b;
+    a >>= b;
+
+    a &= b;
+    a ^= b;
+    a |= b;
+    a , b;
+
+    }
+    """
+
+def test_binop():
+    tu = get_tu(binops, lang="cpp")
+
+    operators = {
+        # not exposed yet
+        # ".*" : BinaryOperator.PtrMemD,
+        "->*" : BinaryOperator.PtrMemI,
+        "*" : BinaryOperator.Mul,
+        "/" : BinaryOperator.Div,
+        "%" : BinaryOperator.Rem,
+        "+" : BinaryOperator.Add,
+        "-" : BinaryOperator.Sub,
+        "<<" : BinaryOperator.Shl,
+        ">>" : BinaryOperator.Shr,
+        "<" : BinaryOperator.LT,
+        ">" : BinaryOperator.GT,
+        "<=" : BinaryOperator.LE,
+        ">=" : BinaryOperator.GE,
+        "==" : BinaryOperator.EQ,
+        "!=" : BinaryOperator.NE,
+        "&" : BinaryOperator.And,
+        "^" : BinaryOperator.Xor,
+        "|" : BinaryOperator.Or,
+        "&&" : BinaryOperator.LAnd,
+        "||" : BinaryOperator.LOr,
+        "=" : BinaryOperator.Assign,
+        "*=" : BinaryOperator.MulAssign,
+        "/=" : BinaryOperator.DivAssign,
+        "%=" : BinaryOperator.RemAssign,
+        "+=" : BinaryOperator.AddAssign,
+        "-=" : BinaryOperator.SubAssign,
+        "<<=" : BinaryOperator.ShlAssign,
+        ">>=" : BinaryOperator.ShrAssign,
+        "&=" : BinaryOperator.AndAssign,
+        "^=" : BinaryOperator.XorAssign,
+        "|=" : BinaryOperator.OrAssign,
+        "," : BinaryOperator.Comma,
+    }
+    for op, typ in operators.items():
+        c = get_cursor(tu, op)
+        assert c.binary_operator == typ
 
     def test_annotation_attribute(self):
         tu = get_tu('int foo (void) __attribute__ ((annotate("here be annotation attribute")));')
